@@ -1,0 +1,10 @@
+torch
+diffusers
+transformers
+accelerate
+safetensors
+opencv-python-headless
+Pillow
+fastapi
+uvicorn[standard]
+python-multipart

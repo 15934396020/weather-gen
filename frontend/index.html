@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ControlNet Weather Scene Studio</title>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0b1020;
+  --bg-soft: #11182d;
+  --panel: rgba(17, 24, 45, 0.88);
+  --panel-strong: rgba(10, 15, 30, 0.96);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #edf2ff;
+  --text-muted: #9ba7c4;
+  --accent: #7c9cff;
+  --accent-2: #8b5cf6;
+  --success: #4ade80;
+  --danger: #f87171;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(124, 156, 255, 0.16), transparent 26%),
+    radial-gradient(circle at top right, rgba(139, 92, 246, 0.14), transparent 28%),
+    linear-gradient(180deg, #08101f 0%, #0a1020 100%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 80%);
+}
+
+.page {
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 36px 24px 32px;
+}
+
+.hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.hero-copy {
+  max-width: 820px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(124, 156, 255, 0.08);
+  color: #d7e2ff;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.hero h1 {
+  font-size: clamp(28px, 3.4vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-bottom: 10px;
+}
+
+.hero p {
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.7;
+  max-width: 760px;
+}
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  min-width: 360px;
+}
+
+.stat {
+  padding: 18px 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.96fr) minmax(420px, 1.04fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+}
+
+.panel-inner {
+  padding: 22px;
+}
+
+.left-column,
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-header h2 {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.panel-subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section + .section {
+  margin-top: 18px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #d7e2ff;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.prompt-input {
+  width: 100%;
+  min-height: 126px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(10, 15, 30, 0.72);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+.prompt-input:focus,
+.upload-area:hover,
+.range-input:focus,
+.seed-input:focus {
+  outline: none;
+  border-color: rgba(124, 156, 255, 0.62);
+  box-shadow: 0 0 0 4px rgba(124, 156, 255, 0.12);
+}
+
+.prompt-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.upload-area {
+  position: relative;
+  min-height: 340px;
+  border: 1.5px dashed rgba(124, 156, 255, 0.36);
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(124, 156, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    rgba(10, 15, 30, 0.72);
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.upload-area:hover {
+  transform: translateY(-1px);
+}
+
+.upload-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 28px;
+  text-align: center;
+}
+
+.upload-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  background: rgba(124, 156, 255, 0.12);
+  border: 1px solid rgba(124, 156, 255, 0.24);
+}
+
+.upload-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.upload-text {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 420px;
+}
+
+.upload-meta {
+  display: inline-flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.upload-chip {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  color: #d6dfff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.upload-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: none;
+  background: rgba(5, 10, 22, 0.88);
+}
+
+.upload-area.has-image .upload-content {
+  display: none;
+}
+
+.upload-area.has-image img {
+  display: block;
+}
+
+.upload-area input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.toggle-row input {
+  accent-color: var(--accent);
+}
+
+.weather-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.weather-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.weather-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+.weather-btn.active {
+  border-color: rgba(124, 156, 255, 0.62);
+  background: linear-gradient(135deg, rgba(124, 156, 255, 0.18), rgba(139, 92, 246, 0.14));
+  box-shadow: inset 0 0 0 1px rgba(124, 156, 255, 0.18), 0 10px 30px rgba(84, 110, 255, 0.18);
+}
+
+.weather-btn.active::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 14px rgba(74, 222, 128, 0.8);
+}
+
+.weather-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.weather-btn[data-weather="sunny"] .weather-icon { background: rgba(250, 204, 21, 0.18); }
+.weather-btn[data-weather="rainy"] .weather-icon { background: rgba(59, 130, 246, 0.18); }
+.weather-btn[data-weather="snowy"] .weather-icon { background: rgba(226, 232, 240, 0.15); }
+.weather-btn[data-weather="foggy"] .weather-icon { background: rgba(148, 163, 184, 0.18); }
+.weather-btn[data-weather="thunderstorm"] .weather-icon { background: rgba(168, 85, 247, 0.18); }
+
+.weather-info strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.weather-info span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.params {
+  display: grid;
+  gap: 14px;
+}
+
+.param-group {
+  padding: 15px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.param-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #dbe5ff;
+}
+
+.param-value {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(124, 156, 255, 0.14);
+  color: #d7e2ff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.range-input,
+.seed-input {
+  width: 100%;
+}
+
+.range-input {
+  accent-color: var(--accent);
+}
+
+.seed-input {
+  margin-top: 2px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(10, 15, 30, 0.72);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.generate-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.gen-btn {
+  flex: 1;
+  padding: 16px 18px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #6d8dff 0%, #7c4dff 100%);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow: 0 16px 32px rgba(95, 94, 255, 0.28);
+}
+
+.gen-btn:hover {
+  transform: translateY(-1px);
+}
+
+.gen-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.job-status {
+  min-width: 180px;
+}
+
+.status-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.status-value {
+  font-size: 13px;
+  color: #dce4ff;
+}
+
+.result-stage {
+  min-height: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(circle at top, rgba(124, 156, 255, 0.08), transparent 32%),
+    rgba(8, 13, 25, 0.84);
+  overflow: hidden;
+  position: relative;
+}
+
+.result-stage img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  cursor: zoom-in;
+  display: block;
+}
+
+.placeholder {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 30px;
+  max-width: 420px;
+  line-height: 1.7;
+}
+
+.placeholder strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 17px;
+}
+
+.loading-card {
+  width: min(420px, calc(100% - 40px));
+  padding: 24px;
+  border-radius: 22px;
+  border: 1px solid rgba(124, 156, 255, 0.16);
+  background: rgba(15, 21, 40, 0.92);
+  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.28);
+}
+
+.loading-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.loading-head h3 {
+  font-size: 17px;
+}
+
+.loading-head span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.progress {
+  height: 10px;
+  width: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7c9cff, #8b5cf6);
+  transition: width 0.35s ease;
+}
+
+.progress-text {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #dce4ff;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.history-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.history-card {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.history-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
+}
+
+.history-meta {
+  padding: 10px 12px 12px;
+}
+
+.history-weather {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #d7e2ff;
+  font-size: 12px;
+}
+
+.history-prompt {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  height: 36px;
+  overflow: hidden;
+}
+
+.empty-history {
+  border: 1px dashed var(--border);
+  border-radius: 18px;
+  padding: 28px 18px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.7;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  background: rgba(3, 6, 15, 0.82);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  position: relative;
+  width: min(1100px, 100%);
+  max-height: 90vh;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: var(--panel-strong);
+  box-shadow: var(--shadow);
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modal img {
+  width: 100%;
+  max-height: calc(90vh - 40px);
+  object-fit: contain;
+  border-radius: 16px;
+  display: block;
+}
+
+@media (max-width: 1180px) {
+  .hero {
+    flex-direction: column;
+  }
+
+  .hero-stats {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 22px 14px 24px;
+  }
+
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .weather-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .generate-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .job-status {
+    min-width: 0;
+  }
+
+  .result-stage {
+    min-height: 360px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow">ControlNet Weather Generation System</div>
+      <h1>Controllable Weather Scene Generation Studio</h1>
+      <p>
+        A professional graduation-project interface for controllable scene synthesis based on ControlNet.
+        Configure prompts, upload structural control images, choose weather conditions, and generate
+        consistent visual results through a FastAPI-powered inference pipeline.
+      </p>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-label">Backend</div>
+        <div class="stat-value">FastAPI</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Control Mode</div>
+        <div class="stat-value">Image + Prompt</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Weather Presets</div>
+        <div class="stat-value">5 Types</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="left-column">
+      <div class="panel">
+        <div class="panel-inner">
+          <div class="panel-header">
+            <div>
+              <h2>Input Workspace</h2>
+              <div class="panel-subtitle">Prompt, control image, weather selection and generation parameters</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Scene Prompt</div>
+            <textarea
+              class="prompt-input"
+              id="prompt"
+              placeholder="Describe the target scene, e.g. a modern city boulevard with tall buildings, pedestrians and traffic lights"
+            ></textarea>
+            <div class="prompt-hint">Use clear scene structure and object descriptions for more stable ControlNet guidance.</div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Control Image</div>
+            <label class="upload-area" id="uploadArea">
+              <div class="upload-content">
+                <div class="upload-icon">🖼️</div>
+                <div class="upload-title">Upload a structural control image</div>
+                <div class="upload-text" id="uploadText">
+                  Click or drag an image here to provide scene layout guidance. Large preview is enabled to help verify edges,
+                  sketch lines or scene composition before generation.
+                </div>
+                <div class="upload-meta">
+                  <span class="upload-chip">PNG / JPG / WEBP</span>
+                  <span class="upload-chip">High-resolution preview</span>
+                  <span class="upload-chip">ControlNet-ready input</span>
+                </div>
+              </div>
+              <img id="previewImg" alt="Control image preview">
+              <input type="file" id="fileInput" accept="image/*">
+            </label>
+            <div class="toggle-row">
+              <input type="checkbox" id="autoCanny" checked>
+              <label for="autoCanny">Auto-extract Canny edges from uploaded image</label>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Weather Presets</div>
+            <div class="weather-grid" id="weatherBtns">
+              <button class="weather-btn active" data-weather="sunny" type="button">
+                <div class="weather-icon">☀️</div>
+                <div class="weather-info">
+                  <strong>Sunny</strong>
+                  <span>Clear light and bright atmosphere</span>
+                </div>
+              </button>
+              <button class="weather-btn" data-weather="rainy" type="button">
+                <div class="weather-icon">🌧️</div>
+                <div class="weather-info">
+                  <strong>Rainy</strong>
+                  <span>Wet streets and overcast mood</span>
+                </div>
+              </button>
+              <button class="weather-btn" data-weather="snowy" type="button">
+                <div class="weather-icon">❄️</div>
+                <div class="weather-info">
+                  <strong>Snowy</strong>
+                  <span>Cold tone with snow coverage</span>
+                </div>
+              </button>
+              <button class="weather-btn" data-weather="foggy" type="button">
+                <div class="weather-icon">🌫️</div>
+                <div class="weather-info">
+                  <strong>Foggy</strong>
+                  <span>Low-visibility cinematic diffusion</span>
+                </div>
+              </button>
+              <button class="weather-btn" data-weather="thunderstorm" type="button">
+                <div class="weather-icon">⛈️</div>
+                <div class="weather-info">
+                  <strong>Thunderstorm</strong>
+                  <span>Storm clouds and dramatic contrast</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Advanced Settings</div>
+            <div class="params">
+              <div class="param-group">
+                <div class="param-label">
+                  <span>Inference Steps</span>
+                  <span class="param-value" id="stepsVal">20</span>
+                </div>
+                <input class="range-input" type="range" id="steps" min="10" max="50" value="20">
+              </div>
+
+              <div class="param-group">
+                <div class="param-label">
+                  <span>CFG Scale</span>
+                  <span class="param-value" id="cfgVal">7.5</span>
+                </div>
+                <input class="range-input" type="range" id="cfg" min="1" max="20" value="7.5" step="0.5">
+              </div>
+
+              <div class="param-group">
+                <div class="param-label">
+                  <span>Seed</span>
+                  <span class="param-value" id="seedVal">-1</span>
+                </div>
+                <input class="seed-input" type="number" id="seed" min="-1" max="9999" value="-1">
+              </div>
+            </div>
+          </div>
+
+          <div class="generate-bar">
+            <button class="gen-btn" id="genBtn" onclick="generate()">Generate Weather Scene</button>
+            <div class="job-status">
+              <div class="status-label">Generation Status</div>
+              <div class="status-value" id="statusText">Idle. Configure inputs and launch inference.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="right-column">
+      <div class="panel">
+        <div class="panel-inner">
+          <div class="panel-header">
+            <div>
+              <h2>Result Viewer</h2>
+              <div class="panel-subtitle">Generated image output from the current FastAPI inference request</div>
+            </div>
+          </div>
+
+          <div class="result-stage" id="resultArea">
+            <div class="placeholder">
+              <strong>Ready for generation</strong>
+              Upload a control image, provide a prompt, choose a weather condition and run the pipeline. The generated result will appear here and can be clicked for enlarged preview.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="historyCard">
+        <div class="panel-inner">
+          <div class="history-head">
+            <div>
+              <h2>Generation History</h2>
+              <div class="panel-subtitle">Recent generated outputs in this session</div>
+            </div>
+            <div class="history-count" id="historyCount">0 items</div>
+          </div>
+          <div class="history-grid" id="historyGrid"></div>
+          <div class="empty-history" id="historyEmpty">
+            No generated images yet. Your recent outputs will appear here for quick comparison and enlarged review.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal" id="imageModal">
+  <div class="modal-content">
+    <button class="modal-close" id="modalClose" type="button" aria-label="Close preview">&times;</button>
+    <img id="modalImg" alt="Enlarged generated image">
+  </div>
+</div>
+
+<script>
+let selectedWeather = 'sunny';
+let uploadedFile = null;
+let progressTimer = null;
+let progressValue = 0;
+let historyCount = 0;
+
+const weatherMeta = {
+  sunny: { icon: '☀️', label: 'Sunny' },
+  rainy: { icon: '🌧️', label: 'Rainy' },
+  snowy: { icon: '❄️', label: 'Snowy' },
+  foggy: { icon: '🌫️', label: 'Foggy' },
+  thunderstorm: { icon: '⛈️', label: 'Thunderstorm' }
+};
+
+const fileInput = document.getElementById('fileInput');
+const previewImg = document.getElementById('previewImg');
+const uploadArea = document.getElementById('uploadArea');
+const resultArea = document.getElementById('resultArea');
+const genBtn = document.getElementById('genBtn');
+const statusText = document.getElementById('statusText');
+const historyGrid = document.getElementById('historyGrid');
+const historyEmpty = document.getElementById('historyEmpty');
+const historyCountEl = document.getElementById('historyCount');
+const modal = document.getElementById('imageModal');
+const modalImg = document.getElementById('modalImg');
+
+document.querySelectorAll('.weather-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.weather-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedWeather = btn.dataset.weather;
+    statusText.textContent = `Weather preset selected: ${weatherMeta[selectedWeather].label}.`;
+  });
+});
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  uploadedFile = file;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    previewImg.src = ev.target.result;
+    uploadArea.classList.add('has-image');
+    statusText.textContent = `Control image loaded: ${file.name}`;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('steps').addEventListener('input', (e) => {
+  document.getElementById('stepsVal').textContent = e.target.value;
+});
+
+document.getElementById('cfg').addEventListener('input', (e) => {
+  document.getElementById('cfgVal').textContent = e.target.value;
+});
+
+document.getElementById('seed').addEventListener('input', (e) => {
+  document.getElementById('seedVal').textContent = e.target.value;
+});
+
+function setLoadingState() {
+  progressValue = 8;
+  resultArea.innerHTML = `
+    <div class="loading-card">
+      <div class="loading-head">
+        <h3>Generating Weather Scene</h3>
+        <span id="progressPercent">8%</span>
+      </div>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar" style="width: 8%"></div>
+      </div>
+      <div class="progress-text" id="progressText">Uploading inputs and initializing the ControlNet pipeline...</div>
+    </div>
+  `;
+
+  const progressBar = document.getElementById('progressBar');
+  const progressPercent = document.getElementById('progressPercent');
+  const progressText = document.getElementById('progressText');
+  const progressMessages = [
+    'Uploading inputs and initializing the ControlNet pipeline...',
+    'Encoding prompt and structural conditions...',
+    'Running weather-conditioned diffusion inference...',
+    'Decoding image output and preparing preview...'
+  ];
+
+  clearInterval(progressTimer);
+  progressTimer = setInterval(() => {
+    progressValue = Math.min(progressValue + Math.random() * 14, 92);
+    progressBar.style.width = `${progressValue}%`;
+    progressPercent.textContent = `${Math.round(progressValue)}%`;
+
+    if (progressValue < 28) {
+      progressText.textContent = progressMessages[0];
+    } else if (progressValue < 52) {
+      progressText.textContent = progressMessages[1];
+    } else if (progressValue < 78) {
+      progressText.textContent = progressMessages[2];
+    } else {
+      progressText.textContent = progressMessages[3];
+    }
+  }, 650);
+}
+
+function clearLoadingState() {
+  clearInterval(progressTimer);
+  progressTimer = null;
+}
+
+function openModal(url) {
+  modalImg.src = url;
+  modal.classList.add('show');
+}
+
+function renderResult(url) {
+  resultArea.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = url;
+  img.alt = 'Generated weather scene';
+  img.addEventListener('click', () => openModal(url));
+  resultArea.appendChild(img);
+}
+
+async function generate() {
+  if (!uploadedFile) {
+    alert('Please upload a control image first.');
+    return;
+  }
+
+  const prompt = document.getElementById('prompt').value.trim();
+  if (!prompt) {
+    alert('Please enter a scene description.');
+    return;
+  }
+
+  genBtn.disabled = true;
+  genBtn.textContent = 'Generating...';
+  statusText.textContent = `Running inference for ${weatherMeta[selectedWeather].label} weather...`;
+  setLoadingState();
+
+  const formData = new FormData();
+  formData.append('prompt', prompt);
+  formData.append('weather', selectedWeather);
+  formData.append('steps', document.getElementById('steps').value);
+  formData.append('cfg_scale', document.getElementById('cfg').value);
+  formData.append('seed', document.getElementById('seed').value);
+  formData.append('auto_canny', document.getElementById('autoCanny').checked);
+  formData.append('control_image', uploadedFile);
+
+  try {
+    const resp = await fetch('/api/generate', { method: 'POST', body: formData });
+    if (!resp.ok) throw new Error('Generation failed');
+
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    clearLoadingState();
+    renderResult(url);
+    addToHistory(url, selectedWeather, prompt);
+    statusText.textContent = `Generation completed successfully for ${weatherMeta[selectedWeather].label}. Click the image to enlarge.`;
+  } catch (err) {
+    clearLoadingState();
+    resultArea.innerHTML = `<div class="placeholder"><strong style="color: var(--danger);">Generation error</strong>${err.message}</div>`;
+    statusText.textContent = 'Generation failed. Please verify backend status and input data.';
+  } finally {
+    genBtn.disabled = false;
+    genBtn.textContent = 'Generate Weather Scene';
+  }
+}
+
+function addToHistory(url, weather, prompt) {
+  historyCount += 1;
+  historyEmpty.style.display = 'none';
+  historyCountEl.textContent = `${historyCount} item${historyCount > 1 ? 's' : ''}`;
+
+  const card = document.createElement('div');
+  card.className = 'history-card';
+
+  const img = document.createElement('img');
+  img.className = 'history-thumb';
+  img.src = url;
+  img.alt = 'Generated history image';
+  img.addEventListener('click', () => openModal(url));
+
+  const meta = document.createElement('div');
+  meta.className = 'history-meta';
+
+  const weatherTag = document.createElement('div');
+  weatherTag.className = 'history-weather';
+  weatherTag.textContent = `${weatherMeta[weather].icon} ${weatherMeta[weather].label}`;
+
+  const promptText = document.createElement('div');
+  promptText.className = 'history-prompt';
+  promptText.textContent = prompt;
+
+  meta.appendChild(weatherTag);
+  meta.appendChild(promptText);
+  card.appendChild(img);
+  card.appendChild(meta);
+
+  historyGrid.prepend(card);
+}
+
+document.getElementById('modalClose').addEventListener('click', () => {
+  modal.classList.remove('show');
+});
+
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) {
+    modal.classList.remove('show');
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    modal.classList.remove('show');
+  }
+});
+</script>
+</body>
+</html>
